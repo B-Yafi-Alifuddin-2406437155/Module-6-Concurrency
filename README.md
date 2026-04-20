@@ -44,3 +44,20 @@ Saya juga memahami kenapa file `hello.html` harus berada pada direktori yang ses
 Berikut adalah hasil tampilan halaman HTML yang berhasil dikirim oleh server:
 
 ![Commit 2 screen capture](./assets/commit2.png)
+
+
+# Commit 3 Reflection Notes
+
+Pada milestone ini saya mempelajari bahwa web server seharusnya tidak selalu mengirim halaman yang sama untuk semua request. Server perlu memeriksa path yang diminta oleh browser agar bisa memberikan response yang sesuai. Pada implementasi ini, saya hanya mengambil baris pertama dari HTTP request, yaitu `request_line`, karena informasi tersebut sudah cukup untuk menentukan apakah browser meminta path `/` atau path lain.
+
+Saya memahami bahwa penggunaan `buf_reader.lines().next().unwrap().unwrap()` lebih efisien dibanding membaca seluruh request seperti pada milestone sebelumnya. Untuk kebutuhan validasi sederhana, server cukup melihat request line seperti `GET / HTTP/1.1`. Jika nilainya cocok, server mengirim `hello.html` dengan status `HTTP/1.1 200 OK`. Jika tidak cocok, server mengirim `404.html` dengan status `HTTP/1.1 404 NOT FOUND`.
+
+Bagian ini membuat saya lebih paham bahwa response HTTP terdiri dari beberapa bagian yang jelas: status line, header seperti `Content-Length`, baris kosong, dan body. Browser lalu menggunakan status code tersebut untuk memahami apakah request berhasil atau gagal, lalu merender isi HTML yang dikirim oleh server.
+
+Saya juga mulai melihat kenapa refactoring dibutuhkan. Pada blok `if` dan `else`, alur kodenya hampir sama: membaca file, menghitung panjang isi, menyusun response, lalu menulis response ke stream. Yang berbeda hanya `status_line` dan nama file HTML. Karena ada duplikasi, kode menjadi lebih panjang dan lebih sulit dirawat. Refactoring dibutuhkan agar pemilihan `status_line` dan file bisa dipisahkan dari proses pembuatan response, sehingga kode menjadi lebih ringkas, lebih mudah dibaca, dan lebih mudah dikembangkan untuk response lain di masa depan.
+
+Dari milestone ini saya belajar bahwa validasi request adalah langkah penting dalam pembuatan web server. Walaupun implementasinya masih sederhana, konsep ini sama dengan yang dilakukan framework web modern: setiap path atau route seharusnya diproses secara berbeda sesuai kebutuhan aplikasi.
+
+Berikut adalah hasil tampilan halaman 404 dari server:
+
+![Commit 3 screen capture](./assets/commit3.png)
