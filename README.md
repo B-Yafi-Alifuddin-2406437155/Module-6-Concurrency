@@ -61,3 +61,16 @@ Dari milestone ini saya belajar bahwa validasi request adalah langkah penting da
 Berikut adalah hasil tampilan halaman 404 dari server:
 
 ![Commit 3 screen capture](./assets/commit3.png)
+
+
+# Commit 4 Reflection Notes
+
+Pada milestone ini saya mempelajari kelemahan utama dari web server yang masih berjalan dengan satu thread. Saya menambahkan endpoint `/sleep` yang secara sengaja menunda response selama 10 detik menggunakan `thread::sleep(Duration::from_secs(10))`. Tujuan simulasi ini adalah untuk menunjukkan bagaimana satu request yang lambat dapat memengaruhi request lain ketika server hanya memproses koneksi secara berurutan.
+
+Setelah menjalankan server dan membuka dua browser atau dua tab, saya mencoba mengakses `http://127.0.0.1:7878/sleep` pada satu tab dan `http://127.0.0.1:7878` pada tab lain. Hasilnya, request ke halaman utama juga ikut tertahan sampai request `/sleep` selesai diproses. Dari percobaan ini saya memahami bahwa server single-threaded hanya dapat menangani satu request pada satu waktu. Selama thread utama sedang tidur atau sibuk memproses satu koneksi, request lain harus menunggu antrean.
+
+Saya juga belajar bahwa pada implementasi ini, `match` digunakan untuk memilih response berdasarkan `request_line`. Pendekatan ini lebih rapi dibanding `if/else` sebelumnya karena semua kemungkinan route sederhana bisa dibaca dalam satu blok. Untuk `/`, server mengembalikan `hello.html`. Untuk `/sleep`, server menunggu 10 detik lalu tetap mengembalikan `hello.html`. Untuk path lain, server mengembalikan `404.html`.
+
+Milestone ini penting karena memperlihatkan masalah performa yang nyata. Jika hanya satu pengguna membuka `/sleep`, pengguna lain yang sebenarnya meminta halaman biasa tetap terkena dampaknya. Dalam aplikasi sungguhan, kondisi seperti ini akan membuat server terasa lambat dan tidak responsif ketika ada banyak pengguna atau ada satu request yang memakan waktu lama.
+
+Dari sini saya memahami alasan kenapa web server modern memerlukan concurrency, baik dengan multithreading, asynchronous programming, atau thread pool. Tanpa mekanisme tersebut, satu request lambat bisa memblokir seluruh server. Jadi milestone ini bukan hanya tentang menambahkan endpoint baru, tetapi tentang memahami bottleneck dari desain single-threaded sebelum masuk ke solusi yang lebih baik pada tahap berikutnya.
