@@ -74,3 +74,18 @@ Saya juga belajar bahwa pada implementasi ini, `match` digunakan untuk memilih r
 Milestone ini penting karena memperlihatkan masalah performa yang nyata. Jika hanya satu pengguna membuka `/sleep`, pengguna lain yang sebenarnya meminta halaman biasa tetap terkena dampaknya. Dalam aplikasi sungguhan, kondisi seperti ini akan membuat server terasa lambat dan tidak responsif ketika ada banyak pengguna atau ada satu request yang memakan waktu lama.
 
 Dari sini saya memahami alasan kenapa web server modern memerlukan concurrency, baik dengan multithreading, asynchronous programming, atau thread pool. Tanpa mekanisme tersebut, satu request lambat bisa memblokir seluruh server. Jadi milestone ini bukan hanya tentang menambahkan endpoint baru, tetapi tentang memahami bottleneck dari desain single-threaded sebelum masuk ke solusi yang lebih baik pada tahap berikutnya.
+
+
+# Commit 5 Reflection Notes
+
+Pada milestone ini saya mempelajari bagaimana mengubah server dari single-threaded menjadi multithreaded menggunakan `ThreadPool`. Sebelumnya, satu request yang lambat seperti `/sleep` dapat menahan seluruh server karena semua koneksi diproses secara berurutan pada satu thread utama. Dengan thread pool, server dapat memproses beberapa request secara bersamaan menggunakan sejumlah worker yang sudah disiapkan sejak awal.
+
+Perubahan penting pertama ada di `main.rs`, yaitu mengganti pemanggilan langsung `handle_connection(stream)` menjadi `pool.execute(|| { handle_connection(stream); })`. Dari sini saya memahami bahwa thread utama tidak lagi memproses setiap request sendiri, tetapi hanya menerima koneksi lalu menyerahkan pekerjaan tersebut ke thread pool. Ini membuat server lebih responsif ketika ada lebih dari satu request yang datang hampir bersamaan.
+
+Di `lib.rs`, saya mempelajari bahwa `ThreadPool` menyimpan dua hal utama: daftar `Worker` dan `sender` dari channel. Setiap `Worker` memiliki thread sendiri yang terus berjalan dan menunggu pekerjaan. Ketika `execute` dipanggil, closure yang berisi tugas akan dibungkus menjadi `Job` lalu dikirim melalui channel. Worker yang berhasil mengambil job dari queue akan menjalankan closure tersebut.
+
+Bagian yang paling penting untuk saya pahami adalah penggunaan `mpsc`, `Arc`, dan `Mutex`. Channel `mpsc` digunakan untuk mengirim job dari `ThreadPool` ke worker. Karena ada banyak worker tetapi hanya satu receiver, receiver harus dibungkus dengan `Arc<Mutex<_>>`. `Arc` memungkinkan beberapa worker memiliki shared ownership terhadap receiver yang sama, sedangkan `Mutex` memastikan hanya satu worker yang mengambil job dari channel pada satu waktu sehingga tidak terjadi race condition.
+
+Saya juga memahami kenapa implementasi worker yang benar menggunakan `loop` dengan baris `let job = receiver.lock().unwrap().recv().unwrap();` lalu menjalankan `job();`. Pendekatan ini memastikan lock pada `Mutex` dilepas setelah job diambil dari queue, sehingga worker lain masih bisa mengambil pekerjaan berikutnya. Ini lebih tepat dibanding pendekatan `while let` yang bisa membuat lock bertahan terlalu lama dan justru menghambat concurrency.
+
+Menurut saya, thread pool adalah solusi yang lebih baik dibanding membuat thread baru untuk setiap request. Jika server membuat thread tanpa batas, resource sistem bisa cepat habis ketika request sangat banyak. Dengan thread pool, jumlah thread tetap terbatas sehingga penggunaan resource lebih terkendali, tetapi server tetap bisa menangani beberapa request secara paralel. Dari milestone ini saya jadi lebih paham bahwa concurrency bukan hanya soal membuat program lebih cepat, tetapi juga soal mengatur resource dengan aman dan efisien.
